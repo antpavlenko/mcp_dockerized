@@ -33,3 +33,49 @@ docker run --rm -v mcp_data:/data mcp-server ls -l /data/api_keys.db
 
 The printed key can then be supplied via the `X-API-Key` header or
 `api_key` query parameter when calling the server.
+
+## Endpoints
+
+The server exposes two simple HTTP endpoints:
+
+| Path | Method | Description |
+|------|--------|-------------|
+| `/mcp` | `POST` | Streamable HTTP transport for MCP requests. Requires a valid API key. |
+| `/generate-key` | `POST` | Generates a new API key. Requires an existing valid API key. |
+
+## Example requests
+
+### Generate a key via HTTP
+
+```bash
+curl -X POST http://localhost:8000/generate-key \
+     -H "X-API-Key: <your-api-key>"
+```
+
+### Call the MCP endpoint
+
+You can issue JSON-RPC requests directly. The example below sends a `ping` request:
+
+```bash
+curl -X POST http://localhost:8000/mcp \
+     -H "Content-Type: application/json" \
+     -H "X-API-Key: <your-api-key>" \
+     -d '{"jsonrpc": "2.0", "id": 1, "method": "ping"}'
+```
+
+For more advanced interaction you can use the `fastmcp` Python client:
+
+```python
+import asyncio
+import fastmcp
+
+async def main():
+    async with fastmcp.Client(
+        "http://localhost:8000/mcp",
+        headers={"X-API-Key": "<your-api-key>"},
+    ) as client:
+        tools = await client.list_tools()
+        print(tools)
+
+asyncio.run(main())
+```
