@@ -38,13 +38,15 @@ class APIKeyMiddleware:
     async def __call__(self, scope, receive, send):
         if scope.get("type") == "http":
             request = Request(scope, receive)
-            key = request.headers.get("x-api-key") or request.query_params.get(
-                "api_key"
-            )
-            if not key or not validate_key(key):
-                response = JSONResponse({"detail": "Invalid API key"}, status_code=401)
-                await response(scope, receive, send)
-                return
+            # allow unauthenticated access to documentation endpoints
+            if request.url.path not in {"/docs", "/openapi.json"}:
+                key = request.headers.get("x-api-key") or request.query_params.get(
+                    "api_key"
+                )
+                if not key or not validate_key(key):
+                    response = JSONResponse({"detail": "Invalid API key"}, status_code=401)
+                    await response(scope, receive, send)
+                    return
         await self.app(scope, receive, send)
 
 
