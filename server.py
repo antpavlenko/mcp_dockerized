@@ -4,6 +4,8 @@ from pathlib import Path
 
 from fastmcp.server import FastMCP
 from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.staticfiles import StaticFiles
+from swagger_ui_bundle import swagger_ui_path
 from starlette.requests import Request
 from starlette.responses import JSONResponse, HTMLResponse
 from urllib.parse import parse_qs
@@ -59,6 +61,7 @@ init_db()
 fast_mcp = FastMCP()
 app = fast_mcp.http_app()
 app.add_middleware(APIKeyMiddleware)
+app.mount("/static", StaticFiles(directory=swagger_ui_path), name="static")
 
 
 async def generate_key(_: Request) -> JSONResponse:
@@ -95,7 +98,13 @@ async def openapi(_: Request) -> JSONResponse:
 
 
 async def swagger(_: Request) -> HTMLResponse:
-    return get_swagger_ui_html(openapi_url="/openapi.json", title="MCP Server API")
+    return get_swagger_ui_html(
+        openapi_url="/openapi.json",
+        title="MCP Server API",
+        swagger_js_url="/static/swagger-ui-bundle.js",
+        swagger_css_url="/static/swagger-ui.css",
+        swagger_favicon_url="/static/favicon-32x32.png",
+    )
 
 
 app.add_route("/openapi.json", openapi, methods=["GET"])

@@ -2,3 +2,4 @@ fastmcp
 uvicorn
 typer
 fastapi
+swagger-ui-bundle
