@@ -50,7 +50,7 @@ class APIKeyMiddleware:
         if scope.get("type") == "http":
             path = scope.get("path", "")
             logger.info("Handling request for %s", path)
-            if path not in {"/docs", "/doc", "/openapi.json"}:
+            if path not in {"/docs", "/doc", "/openapi.json"} and not path.startswith("/static"):
                 headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
                 key = headers.get("x-api-key")
                 if not key:
