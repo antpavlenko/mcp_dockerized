@@ -69,14 +69,14 @@ For more advanced interaction you can use the `fastmcp` Python client:
 
 ```python
 import asyncio
-import fastmcp
+from fastmcp.client import Client, StreamableHttpTransport
 
 async def main():
-    transport = fastmcp.StreamableHttpTransport(
+    transport = StreamableHttpTransport(
         "http://localhost:8000/mcp",
         headers={"X-API-Key": "<your-api-key>"},
     )
-    async with fastmcp.Client(transport) as client:
+    async with Client(transport) as client:
         tools = await client.list_tools()
         print(tools)
 
