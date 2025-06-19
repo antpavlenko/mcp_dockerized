@@ -3,8 +3,9 @@ import sqlite3
 from pathlib import Path
 
 from fastmcp.server import FastMCP
+from fastapi.openapi.docs import get_swagger_ui_html
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, HTMLResponse
 
 DB_PATH = Path("/data/api_keys.db")
 
@@ -58,3 +59,37 @@ async def generate_key(_: Request) -> JSONResponse:
 
 
 app.add_route("/generate-key", generate_key, methods=["POST"])
+
+
+OPENAPI_SCHEMA = {
+    "openapi": "3.0.0",
+    "info": {"title": "MCP Server", "version": "1.0.0"},
+    "paths": {
+        "/mcp": {
+            "post": {
+                "summary": "Streamable HTTP endpoint for MCP requests",
+                "description": "Accepts MCP JSON-RPC requests via Streamable HTTP. Requires a valid API key.",
+                "responses": {"200": {"description": "Success"}, "401": {"description": "Invalid API key"}},
+            }
+        },
+        "/generate-key": {
+            "post": {
+                "summary": "Generate a new API key",
+                "description": "Creates and returns a new API key. Requires an existing valid API key.",
+                "responses": {"200": {"description": "New API key"}, "401": {"description": "Invalid API key"}},
+            }
+        },
+    },
+}
+
+
+async def openapi(_: Request) -> JSONResponse:
+    return JSONResponse(OPENAPI_SCHEMA)
+
+
+async def swagger(_: Request) -> HTMLResponse:
+    return get_swagger_ui_html(openapi_url="/openapi.json", title="MCP Server API")
+
+
+app.add_route("/openapi.json", openapi, methods=["GET"])
+app.add_route("/docs", swagger, methods=["GET"])
