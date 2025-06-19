@@ -72,10 +72,11 @@ import asyncio
 import fastmcp
 
 async def main():
-    async with fastmcp.Client(
+    transport = fastmcp.StreamableHttpTransport(
         "http://localhost:8000/mcp",
         headers={"X-API-Key": "<your-api-key>"},
-    ) as client:
+    )
+    async with fastmcp.Client(transport) as client:
         tools = await client.list_tools()
         print(tools)
 
