@@ -4,6 +4,8 @@ import sqlite3
 from pathlib import Path
 
 from fastmcp.server import FastMCP
+import importlib
+import pkgutil
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.staticfiles import StaticFiles
 from swagger_ui_bundle import swagger_ui_path
@@ -42,6 +44,24 @@ def validate_key(key: str) -> bool:
     return row is not None
 
 
+PLUGINS_PACKAGE = "plugins"
+
+
+def load_plugins(server: FastMCP, package: str = PLUGINS_PACKAGE) -> None:
+    """Load tool and resource plugins from the given package."""
+    try:
+        pkg = importlib.import_module(package)
+    except ModuleNotFoundError:
+        logger.warning("Plugins package %s not found", package)
+        return
+
+    for _, module_name, _ in pkgutil.iter_modules(pkg.__path__):
+        module = importlib.import_module(f"{package}.{module_name}")
+        setup = getattr(module, "setup", None)
+        if callable(setup):
+            setup(server)
+
+
 class APIKeyMiddleware:
     def __init__(self, app):
         self.app = app
@@ -73,6 +93,7 @@ class APIKeyMiddleware:
 
 init_db()
 fast_mcp = FastMCP()
+load_plugins(fast_mcp)
 app = fast_mcp.http_app()
 logger.info("FastMCP application initialized")
 app.add_middleware(APIKeyMiddleware)
