@@ -81,3 +81,13 @@ async def main():
 
 asyncio.run(main())
 ```
+
+## Plugins
+
+Additional tools and resources can be added by placing modules in the
+`plugins` package. Each module should expose a `setup(server)` function
+which receives the `FastMCP` instance and registers tools or resources.
+All modules in this package are automatically imported on startup.
+
+This repository ships with a `terminal` plugin providing a simple tool
+for running commands on the host system.
