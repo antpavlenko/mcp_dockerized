@@ -43,7 +43,7 @@ The server exposes two simple HTTP endpoints:
 | `/mcp` | `POST` | Streamable HTTP transport for MCP requests. Requires a valid API key. |
 | `/generate-key` | `POST` | Generates a new API key. Requires an existing valid API key. |
 
-Interactive API documentation is available at [`/docs`](http://localhost:8000/docs) with the raw schema at [`/openapi.json`](http://localhost:8000/openapi.json).
+Interactive API documentation is available at [`/docs`](http://localhost:8000/docs) (also accessible via `/doc`) with the raw schema at [`/openapi.json`](http://localhost:8000/openapi.json).
 
 ## Example requests
 

@@ -50,7 +50,7 @@ class APIKeyMiddleware:
         if scope.get("type") == "http":
             path = scope.get("path", "")
             logger.info("Handling request for %s", path)
-            if path not in {"/docs", "/openapi.json"}:
+            if path not in {"/docs", "/doc", "/openapi.json"}:
                 headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
                 key = headers.get("x-api-key")
                 if not key:
@@ -126,4 +126,5 @@ async def swagger(_: Request) -> HTMLResponse:
 
 app.add_route("/openapi.json", openapi, methods=["GET"])
 app.add_route("/docs", swagger, methods=["GET"])
+app.add_route("/doc", swagger, methods=["GET"])
 logger.info("Routes registered. Server ready.")
