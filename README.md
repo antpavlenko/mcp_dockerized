@@ -65,6 +65,19 @@ curl -X POST http://localhost:8000/mcp \
      -d '{"jsonrpc": "2.0", "id": 1, "method": "ping"}'
 ```
 
+### Call a tool via HTTP
+
+Tools are invoked using the `tools/call` method. Provide the tool name and any
+arguments in the JSON-RPC payload. The example below runs the built-in
+`terminal` tool:
+
+```bash
+curl -X POST http://localhost:8000/mcp \
+     -H "Content-Type: application/json" \
+     -H "X-API-Key: <your-api-key>" \
+     -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "terminal", "arguments": {"cmd": "echo hello"}}}'
+```
+
 For more advanced interaction you can use the `fastmcp` Python client:
 
 ```python
@@ -79,6 +92,8 @@ async def main():
     async with Client(transport) as client:
         tools = await client.list_tools()
         print(tools)
+        result = await client.call_tool("terminal", {"cmd": "echo hello"})
+        print(result[0].text)
 
 asyncio.run(main())
 ```
