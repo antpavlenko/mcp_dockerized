@@ -49,10 +49,12 @@ class APIKeyMiddleware:
 
 init_db()
 fast_mcp = FastMCP()
-app = fast_mcp.streamable_http_app()
+app = fast_mcp.http_app()
 app.add_middleware(APIKeyMiddleware)
 
 
-@app.route("/generate-key", methods=["POST"])
 async def generate_key(_: Request) -> JSONResponse:
     return JSONResponse({"api_key": create_api_key()})
+
+
+app.add_route("/generate-key", generate_key, methods=["POST"])
