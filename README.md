@@ -24,5 +24,12 @@ Use the management CLI inside the container to create keys:
 docker run --rm -v mcp_data:/data mcp-server python manage.py generate-key
 ```
 
+Generated keys are written to `/data/api_keys.db` inside the container or the mounted volume.
+You can confirm the file exists by listing it with a one-off container:
+
+```bash
+docker run --rm -v mcp_data:/data mcp-server ls -l /data/api_keys.db
+```
+
 The printed key can then be supplied via the `X-API-Key` header or
 `api_key` query parameter when calling the server.
