@@ -6,6 +6,7 @@ from fastmcp.server import FastMCP
 from fastapi.openapi.docs import get_swagger_ui_html
 from starlette.requests import Request
 from starlette.responses import JSONResponse, HTMLResponse
+from urllib.parse import parse_qs
 
 DB_PATH = Path("/data/api_keys.db")
 
@@ -37,12 +38,16 @@ class APIKeyMiddleware:
 
     async def __call__(self, scope, receive, send):
         if scope.get("type") == "http":
-            request = Request(scope, receive)
-            # allow unauthenticated access to documentation endpoints
-            if request.url.path not in {"/docs", "/openapi.json"}:
-                key = request.headers.get("x-api-key") or request.query_params.get(
-                    "api_key"
-                )
+
+            path = scope.get("path", "")
+            if path not in {"/docs", "/openapi.json"}:
+                headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+                key = headers.get("x-api-key")
+                if not key:
+                    query = parse_qs(scope.get("query_string", b"").decode())
+                    values = query.get("api_key")
+                    key = values[0] if values else None
+
                 if not key or not validate_key(key):
                     response = JSONResponse({"detail": "Invalid API key"}, status_code=401)
                     await response(scope, receive, send)
