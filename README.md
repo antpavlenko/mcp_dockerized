@@ -16,12 +16,29 @@ docker run -p 8000:8000 -v mcp_data:/data mcp-server
 The container stores API keys in `/data/api_keys.db`. Mount a volume to
 persist keys across restarts.
 
+### Run with Docker Compose
+
+Create the included `docker-compose.yml` file and start the service:
+
+```bash
+docker compose up --build -d
+```
+
+This builds the image if necessary and launches the server on port 8000.
+The API key database is persisted in the `mcp_data` volume.
+
 ### Generate API keys
 
 Use the management CLI inside the container to create keys:
 
 ```bash
 docker run --rm -v mcp_data:/data mcp-server python manage.py generate-key
+```
+
+If you're using Docker Compose:
+
+```bash
+docker compose run --rm mcp python manage.py generate-key
 ```
 
 Generated keys are written to `/data/api_keys.db` inside the container or the mounted volume.
