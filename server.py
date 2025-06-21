@@ -1,23 +1,21 @@
 import logging
 import secrets
 import sqlite3
+import os
 from pathlib import Path
 
 from fastmcp.server import FastMCP
 import importlib
 import pkgutil
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.staticfiles import StaticFiles
-from swagger_ui_bundle import swagger_ui_path
 from starlette.requests import Request
 from starlette.responses import JSONResponse, HTMLResponse
 from urllib.parse import parse_qs
 
-DB_PATH = Path("/data/api_keys.db")
+DB_PATH = Path(os.environ.get("MCP_DB_PATH", "/data/api_keys.db"))
+PLUGINS_PACKAGE = "plugins"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 def init_db() -> None:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -44,9 +42,6 @@ def validate_key(key: str) -> bool:
     return row is not None
 
 
-PLUGINS_PACKAGE = "plugins"
-
-
 def load_plugins(server: FastMCP, package: str = PLUGINS_PACKAGE) -> None:
     """Load tool and resource plugins from the given package."""
     try:
@@ -70,34 +65,28 @@ class APIKeyMiddleware:
         if scope.get("type") == "http":
             path = scope.get("path", "")
             logger.info("Handling request for %s", path)
-            if path not in {"/docs", "/doc", "/openapi.json"} and not path.startswith("/static"):
-                headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
-                key = headers.get("x-api-key")
+            
+            headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+            key = headers.get("x-api-key")
+            if not key:
+                query = parse_qs(scope.get("query_string", b"").decode())
+                values = query.get("api_key")
+                key = values[0] if values else None
                 if not key:
-                    query = parse_qs(scope.get("query_string", b"").decode())
-                    values = query.get("api_key")
-                    key = values[0] if values else None
-                    if not key:
-                        logger.warning("Missing API key for request to %s", path)
-                        response = JSONResponse({"detail": "Invalid API key"}, status_code=401)
-                        await response(scope, receive, send)
-                        return
-
-                if not validate_key(key):
-                    logger.warning("Invalid API key for request to %s", path)
+                    logger.warning("Missing API key for request to %s", path)
                     response = JSONResponse({"detail": "Invalid API key"}, status_code=401)
                     await response(scope, receive, send)
                     return
+
+            if not validate_key(key):
+                logger.warning("Invalid API key for request to %s", path)
+                response = JSONResponse({"detail": "Invalid API key"}, status_code=401)
+                await response(scope, receive, send)
+                return
+            
         await self.app(scope, receive, send)
 
 
-init_db()
-fast_mcp = FastMCP()
-load_plugins(fast_mcp)
-app = fast_mcp.http_app()
-logger.info("FastMCP application initialized")
-app.add_middleware(APIKeyMiddleware)
-app.mount("/static", StaticFiles(directory=swagger_ui_path), name="static")
 
 
 async def generate_key(_: Request) -> JSONResponse:
@@ -106,46 +95,12 @@ async def generate_key(_: Request) -> JSONResponse:
     return JSONResponse({"api_key": key})
 
 
+init_db()
+fast_mcp = FastMCP()
+load_plugins(fast_mcp)
+app = fast_mcp.http_app()
+logger.info("FastMCP application initialized")
+app.add_middleware(APIKeyMiddleware)
+
 app.add_route("/generate-key", generate_key, methods=["POST"])
-
-
-OPENAPI_SCHEMA = {
-    "openapi": "3.0.0",
-    "info": {"title": "MCP Server", "version": "1.0.0"},
-    "paths": {
-        "/mcp": {
-            "post": {
-                "summary": "Streamable HTTP endpoint for MCP requests",
-                "description": "Accepts MCP JSON-RPC requests via Streamable HTTP. Requires a valid API key.",
-                "responses": {"200": {"description": "Success"}, "401": {"description": "Invalid API key"}},
-            }
-        },
-        "/generate-key": {
-            "post": {
-                "summary": "Generate a new API key",
-                "description": "Creates and returns a new API key. Requires an existing valid API key.",
-                "responses": {"200": {"description": "New API key"}, "401": {"description": "Invalid API key"}},
-            }
-        },
-    },
-}
-
-
-async def openapi(_: Request) -> JSONResponse:
-    return JSONResponse(OPENAPI_SCHEMA)
-
-
-async def swagger(_: Request) -> HTMLResponse:
-    return get_swagger_ui_html(
-        openapi_url="/openapi.json",
-        title="MCP Server API",
-        swagger_js_url="/static/swagger-ui-bundle.js",
-        swagger_css_url="/static/swagger-ui.css",
-        swagger_favicon_url="/static/favicon-32x32.png",
-    )
-
-
-app.add_route("/openapi.json", openapi, methods=["GET"])
-app.add_route("/docs", swagger, methods=["GET"])
-app.add_route("/doc", swagger, methods=["GET"])
 logger.info("Routes registered. Server ready.")

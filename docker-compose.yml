@@ -3,7 +3,10 @@ services:
   mcp:
     build: .
     ports:
-      - "8000:8000"
+      - "${MCP_PORT:-8000}:${MCP_PORT:-8000}"
+    environment:
+      - MCP_DB_PATH=/data/api_keys.db
+      - MCP_PORT=8000
     volumes:
       - mcp_data:/data
 volumes:
