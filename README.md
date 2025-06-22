@@ -29,13 +29,11 @@ requests using a simple API key authentication system.
 ### Build and run with Docker
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/mcp_dockerized.git
-cd mcp_dockerized
+# Pull the latest image
+docker pull antpavlenkohmcorp/mcp-dockerized:latest
 
-# Build and run the container
-docker build -t mcp-server .
-docker run -p 8000:8000 -v mcp_data:/data mcp-server
+# Run the container
+docker run -p 8000:8000 -v mcp_data:/data antpavlenkohmcorp/mcp-dockerized
 ```
 
 The container stores API keys in `/data/api_keys.db`. Mount a volume to
