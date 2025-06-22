@@ -3,7 +3,7 @@ FROM python:3.12-slim
 # Add Docker Hub metadata
 LABEL org.opencontainers.image.title="MCP Dockerized powered by FastMCP"
 LABEL org.opencontainers.image.description="A dockerized Model Control Protocol (MCP) server with API key authentication and plugin support"
-LABEL org.opencontainers.image.version="0.1.0"
+LABEL org.opencontainers.image.version="0.1.1"
 LABEL org.opencontainers.image.authors="Anton Pavlenko <anton@pavlenko.expert>"
 LABEL org.opencontainers.image.url="https://github.com/antpavlenko/mcp_dockerized"
 LABEL org.opencontainers.image.documentation="https://github.com/antpavlenko/mcp_dockerized/README.md"
