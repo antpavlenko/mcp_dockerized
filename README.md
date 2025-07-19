@@ -146,24 +146,10 @@ docker-compose logs mcp-server | grep "API Key generated"
 
 ### Generate Additional API Keys
 
-#### Method 1: Using the API
+#### Using the API
 ```bash
 curl -X POST http://localhost:8000/api/generate-key \
   -H "Authorization: Bearer <existing-api-key>"
-```
-
-#### Method 2: Using the Python Script
-```bash
-# Generate locally (when server is stopped)
-docker-compose exec mcp-server python generate_api_key.py
-
-# Generate via API (when server is running)
-docker-compose exec mcp-server python generate_api_key.py --api
-```
-
-#### Method 3: Direct Container Execution
-```bash
-docker run --rm -v $(pwd)/data:/app/data mcp-dockerized python generate_api_key.py
 ```
 
 ## Creating Custom Tools
@@ -234,9 +220,6 @@ For the best development experience, install these VS Code extensions:
 
 #### **Primary Testing Extension**
 - **REST Client** (`humao.rest-client`) - Test API endpoints directly in VS Code
-  - Use the provided `test_api.http` file
-  - Replace `YOUR_API_KEY_HERE` with your actual API key
-  - Click "Send Request" above each request block
 
 #### **Development Extensions**
 - **Python** (`ms-python.python`) - Python language support
@@ -255,11 +238,9 @@ For the best development experience, install these VS Code extensions:
    docker-compose logs mcp-server | grep "First API key"
    ```
 
-2. **Open `test_api.http`** and replace `YOUR_API_KEY_HERE` with your actual key
+2. **Use your preferred HTTP client** to test the API endpoints
 
-3. **Click "Send Request"** above any test block to execute it
-
-4. **Use VS Code tasks** (Ctrl+Shift+P → "Tasks: Run Task"):
+3. **Use VS Code tasks** (Ctrl+Shift+P → "Tasks: Run Task"):
    - Start MCP Server
    - Stop MCP Server  
    - Test MCP Server
@@ -341,9 +322,10 @@ curl http://localhost:8000/health
    ```
 
 ### API Key Issues
-1. Generate new API key:
+1. Generate new API key using the API:
    ```bash
-   docker-compose exec mcp-server python generate_api_key.py
+   curl -X POST http://localhost:8000/api/generate-key \
+     -H "Authorization: Bearer <existing-api-key>"
    ```
 
 2. Check existing keys:
@@ -371,3 +353,83 @@ MIT License - see LICENSE file for details.
 ## Support
 
 For issues and questions, please open an issue on the GitHub repository.
+
+## Docker Hub Deployment
+
+### Pre-built Images
+MCP Dockerized is available on Docker Hub with support for multiple platforms:
+
+- **Linux AMD64/ARM64**: `antpavlenkohmcorp/mcp-dockerized:latest`
+- **Windows**: `antpavlenkohmcorp/mcp-dockerized:latest-windows`
+
+### Quick Start with Docker Hub
+
+#### Linux/macOS:
+```bash
+# Run with default settings
+docker run -d -p 8000:8000 antpavlenkohmcorp/mcp-dockerized:latest
+
+# Run with custom environment variables
+docker run -d -p 8000:8000 \
+  -e MCPD_PORT=8000 \
+  -e MCPD_LOG_LEVEL=INFO \
+  -v $(pwd)/data:/app/data \
+  antpavlenkohmcorp/mcp-dockerized:latest
+```
+
+#### Windows:
+```powershell
+# Run Windows container
+docker run -d -p 8000:8000 antpavlenkohmcorp/mcp-dockerized:latest-windows
+
+# Run with persistent data
+docker run -d -p 8000:8000 `
+  -e MCPD_PORT=8000 `
+  -e MCPD_LOG_LEVEL=INFO `
+  -v ${PWD}/data:/app/data `
+  antpavlenkohmcorp/mcp-dockerized:latest-windows
+```
+
+#### Using Docker Compose with Docker Hub:
+```bash
+# Update your docker-compose.yml to use the Docker Hub image:
+# image: antpavlenkohmcorp/mcp-dockerized:latest
+```
+
+### Platform-Specific Pulls
+```bash
+# Force specific architecture (Linux)
+docker run --platform linux/amd64 -d -p 8000:8000 antpavlenkohmcorp/mcp-dockerized:latest
+docker run --platform linux/arm64 -d -p 8000:8000 antpavlenkohmcorp/mcp-dockerized:latest
+
+# ARM v7 (Raspberry Pi)
+docker run --platform linux/arm/v7 -d -p 8000:8000 antpavlenkohmcorp/mcp-dockerized:latest
+```
+
+### Building and Publishing Your Own Images
+
+#### Prerequisites:
+1. **Docker Desktop** with buildx support
+2. **Docker Hub account**
+
+#### Manual Build Process:
+```bash
+# 1. Enable Docker buildx
+docker buildx create --name mcp-builder --use
+
+# 2. Build and push multi-platform
+docker buildx build \
+  --platform linux/amd64,linux/arm64,linux/arm/v7 \
+  --tag YOUR_DOCKERHUB_USERNAME/mcp-dockerized:latest \
+  --push .
+
+# 3. Build Windows (on Windows machine)
+docker build -f Dockerfile.windows \
+  -t YOUR_DOCKERHUB_USERNAME/mcp-dockerized:latest-windows .
+docker push YOUR_DOCKERHUB_USERNAME/mcp-dockerized:latest-windows
+```
+
+#### Automated Builds with GitHub Actions:
+The repository includes GitHub Actions workflows for automated building. Set these secrets in your GitHub repository:
+- `DOCKER_USERNAME`: Your Docker Hub username
+- `DOCKER_PASSWORD`: Your Docker Hub password or access token
