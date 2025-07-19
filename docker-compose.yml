@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build: .
+    ports:
+      - "${MCPD_PORT:-8000}:8000"
+    environment:
+      - MCPD_PORT=${MCPD_PORT:-8000}
+      - MCPD_LOG_LEVEL=${MCPD_LOG_LEVEL:-INFO}
+      - MCPD_API_KEY_LENGTH=${MCPD_API_KEY_LENGTH:-32}
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock  # For host commands if needed
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  data:

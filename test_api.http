@@ -1,0 +1,179 @@
+### MCP Dockerized Server API Tests
+### Make sure to replace {{api_key}} with your actual API key
+### Get your API key by running: docker-compose logs mcp-server | grep "First API key"
+
+@baseUrl = http://localhost:8000
+@apiKey = Rq8JW9CbcbxJidcnH-AE1qNqbHNEr0jL26jebGWvy4k
+
+### Health Check (No auth required)
+GET {{baseUrl}}/health
+
+###
+
+### List Available Tools
+GET {{baseUrl}}/api/tools
+Authorization: Bearer {{apiKey}}
+
+###
+
+### Get System Info (time only)
+POST {{baseUrl}}/api/tools/system_info
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "info_type": "time"
+}
+
+###
+
+### Get System Info (all)
+POST {{baseUrl}}/api/tools/system_info
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "info_type": "all"
+}
+
+###
+
+### Get Environment Variables (MCPD_* only)
+POST {{baseUrl}}/api/tools/system_info
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "info_type": "environment",
+  "filter_env": "MCPD_"
+}
+
+###
+
+### Execute Console Command - Simple Echo
+POST {{baseUrl}}/api/tools/console
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "command": "echo 'Hello from MCP Server!'",
+  "timeout": 10
+}
+
+###
+
+### Execute Console Command - List Directory
+POST {{baseUrl}}/api/tools/console
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "command": "ls -la",
+  "timeout": 15
+}
+
+###
+
+### Execute Console Command - System Info
+POST {{baseUrl}}/api/tools/console
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "command": "uname -a && date",
+  "timeout": 10
+}
+
+###
+
+### Execute Console Command - With Working Directory
+POST {{baseUrl}}/api/tools/console
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "command": "pwd && ls -la",
+  "timeout": 10,
+  "working_directory": "/tmp"
+}
+
+###
+
+### Generate New API Key
+POST {{baseUrl}}/api/generate-key
+Authorization: Bearer {{apiKey}}
+
+###
+
+### MCP Protocol - Initialize
+GET {{baseUrl}}/api/mcp/initialize
+Authorization: Bearer {{apiKey}}
+
+###
+
+### MCP Protocol - List Tools
+GET {{baseUrl}}/api/mcp/tools/list
+Authorization: Bearer {{apiKey}}
+
+###
+
+### MCP Protocol - Call Console Tool
+POST {{baseUrl}}/api/mcp/tools/call
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "console",
+  "arguments": {
+    "command": "echo 'MCP Protocol Test'",
+    "timeout": 10
+  }
+}
+
+###
+
+### MCP Protocol - Call System Info Tool
+POST {{baseUrl}}/api/mcp/tools/call
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "system_info",
+  "arguments": {
+    "info_type": "time"
+  }
+}
+
+###
+
+### Test Error Handling - Invalid Tool
+POST {{baseUrl}}/api/tools/nonexistent_tool
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "test": "error"
+}
+
+###
+
+### Test Error Handling - Invalid Command
+POST {{baseUrl}}/api/tools/console
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "command": "nonexistent_command_12345",
+  "timeout": 5
+}
+
+###
+
+### Test Error Handling - No Auth
+GET {{baseUrl}}/api/tools
+
+###
+
+### Test Error Handling - Invalid API Key
+GET {{baseUrl}}/api/tools
+Authorization: Bearer invalid_key_12345
