@@ -430,6 +430,12 @@ docker push YOUR_DOCKERHUB_USERNAME/mcp-dockerized:latest-windows
 ```
 
 #### Automated Builds with GitHub Actions:
-The repository includes GitHub Actions workflows for automated building. Set these secrets in your GitHub repository:
+The repository includes GitHub Actions workflows for automated building and testing. 
+
+**For Pull Requests**: The workflow will build and test Docker images without requiring any setup.
+
+**For Publishing to Docker Hub**: If you want to automatically publish images to Docker Hub, set these secrets in your GitHub repository settings (Settings → Secrets and variables → Actions):
 - `DOCKER_USERNAME`: Your Docker Hub username
 - `DOCKER_PASSWORD`: Your Docker Hub password or access token
+
+**Note**: Without these secrets, the workflow will still build and test the images for pull requests, but won't publish them to Docker Hub.
