@@ -27,11 +27,11 @@ USER mcpuser
 RUN mkdir -p /app/data
 
 # Expose port
-EXPOSE 8000
+EXPOSE 666
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:666/health || exit 1
 
 # Labels for metadata (Docker Hub & OCI)
 LABEL org.opencontainers.image.title="MCP Dockerized" \

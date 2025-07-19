@@ -14,11 +14,11 @@ COPY . .
 RUN mkdir C:\app\data
 
 # Expose port
-EXPOSE 8000
+EXPOSE 666
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 `
-    CMD powershell -command "try { Invoke-WebRequest -Uri http://localhost:8000/health -UseBasicParsing; exit 0 } catch { exit 1 }"
+    CMD powershell -command "try { Invoke-WebRequest -Uri http://localhost:666/health -UseBasicParsing; exit 0 } catch { exit 1 }"
 
 # Labels for metadata
 LABEL org.opencontainers.image.title="MCP Dockerized"

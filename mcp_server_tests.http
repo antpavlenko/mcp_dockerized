@@ -1,0 +1,138 @@
+### MCP Dockerized Server Tests
+### Server: mcp.micinc.tech
+### API Key: jLDNcdk8X2CP5C0wizRWW4MtOyoy45VnzP1WVfVLvso
+
+@baseUrl = http://mcp.micinc.tech
+@apiKey = ...
+
+### 1. Health Check (No authentication required)
+GET {{baseUrl}}/health
+Content-Type: application/json
+
+###
+
+### 2. MCP Initialize - Check protocol capabilities
+GET {{baseUrl}}/api/mcp/initialize
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+###
+
+### 3. List all available tools (MCP Protocol)
+GET {{baseUrl}}/api/mcp/tools/list
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+###
+
+### 4. List all available tools (Direct API)
+GET {{baseUrl}}/api/tools
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+###
+
+### 5. Call MCP Tool - System Info
+POST {{baseUrl}}/api/mcp/tools/call
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "system_info",
+  "arguments": {}
+}
+
+###
+
+### 6. Execute Tool Directly - System Info
+POST {{baseUrl}}/api/tools/system_info
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{}
+
+###
+
+### 7. Call MCP Tool - Console (example command)
+POST {{baseUrl}}/api/mcp/tools/call
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "console",
+  "arguments": {
+    "command": "echo 'Hello from MCP server!'"
+  }
+}
+
+###
+
+### 8. Execute Tool Directly - Console (example command)
+POST {{baseUrl}}/api/tools/console
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "command": "ls -la"
+}
+
+###
+
+### 9. Generate New API Key (requires existing valid API key)
+POST {{baseUrl}}/api/generate-key
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+###
+
+### 10. Test invalid API key (should return 401)
+GET {{baseUrl}}/api/tools
+Authorization: Bearer invalid-key
+Content-Type: application/json
+
+###
+
+### 11. Test missing authorization (should return 403/401)
+GET {{baseUrl}}/api/tools
+Content-Type: application/json
+
+###
+
+### Advanced Tests
+
+### 12. Call Console Tool with Multiple Commands
+POST {{baseUrl}}/api/mcp/tools/call
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "console",
+  "arguments": {
+    "command": "whoami && pwd && date"
+  }
+}
+
+###
+
+### 13. Test Error Handling - Invalid Tool Name
+POST {{baseUrl}}/api/mcp/tools/call
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "name": "nonexistent_tool",
+  "arguments": {}
+}
+
+###
+
+### 14. Test Error Handling - Invalid Tool Parameters
+POST {{baseUrl}}/api/tools/console
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "invalid_parameter": "test"
+}
+
+###

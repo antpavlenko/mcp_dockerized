@@ -21,7 +21,7 @@ load_dotenv()
 
 class MCPServer:
     def __init__(self):
-        self.port = int(os.getenv("MCPD_PORT", 8000))
+        self.port = int(os.getenv("MCPD_PORT", 666))
         self.log_level = os.getenv("MCPD_LOG_LEVEL", "INFO").upper()
         self.api_key_length = int(os.getenv("MCPD_API_KEY_LENGTH", 32))
         
