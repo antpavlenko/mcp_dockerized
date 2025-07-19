@@ -357,10 +357,9 @@ For issues and questions, please open an issue on the GitHub repository.
 ## Docker Hub Deployment
 
 ### Pre-built Images
-MCP Dockerized is available on Docker Hub with support for multiple platforms:
+MCP Dockerized is available on Docker Hub with support for multiple Linux platforms:
 
-- **Linux AMD64/ARM64**: `antpavlenkohmcorp/mcp-dockerized:latest`
-- **Windows**: `antpavlenkohmcorp/mcp-dockerized:latest-windows`
+- **Linux AMD64/ARM64/ARM v7**: `antpavlenkohmcorp/mcp-dockerized:latest`
 
 ### Quick Start with Docker Hub
 
@@ -379,15 +378,15 @@ docker run -d -p 8000:8000 \
 
 #### Windows:
 ```powershell
-# Run Windows container
-docker run -d -p 8000:8000 antpavlenkohmcorp/mcp-dockerized:latest-windows
+# Run Linux container on Windows (recommended)
+docker run -d -p 8000:8000 antpavlenkohmcorp/mcp-dockerized:latest
 
 # Run with persistent data
 docker run -d -p 8000:8000 `
   -e MCPD_PORT=8000 `
   -e MCPD_LOG_LEVEL=INFO `
   -v ${PWD}/data:/app/data `
-  antpavlenkohmcorp/mcp-dockerized:latest-windows
+  antpavlenkohmcorp/mcp-dockerized:latest
 ```
 
 #### Using Docker Compose with Docker Hub:
