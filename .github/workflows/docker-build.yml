@@ -46,6 +46,19 @@ jobs:
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
           type=raw,value=latest,enable={{is_default_branch}}
+        labels: |
+          org.opencontainers.image.title=MCP Dockerized
+          org.opencontainers.image.description=🐳 Containerized Model Context Protocol (MCP) server with extensible tools, API key authentication, and multi-platform support
+          org.opencontainers.image.vendor=Anton Pavlenko
+          org.opencontainers.image.authors=Anton Pavlenko <apavlenko@hmcorp.fund>
+          org.opencontainers.image.url=https://hub.docker.com/r/antpavlenkohmcorp/mcp-dockerized
+          org.opencontainers.image.documentation=https://github.com/antpavlenko/mcp_dockerized/blob/main/README.md
+          org.opencontainers.image.source=https://github.com/antpavlenko/mcp_dockerized
+          org.opencontainers.image.licenses=MIT
+          maintainer=Anton Pavlenko <apavlenko@hmcorp.fund>
+          io.artifacthub.package.readme-url=https://raw.githubusercontent.com/antpavlenko/mcp_dockerized/main/.docker/README.md
+          io.artifacthub.package.keywords=mcp,model-context-protocol,docker,api,tools,containerized,python
+          io.artifacthub.package.category=integration-delivery
 
     - name: Build and push Linux images
       uses: docker/build-push-action@v5

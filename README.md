@@ -1,6 +1,11 @@
-# MCP Dockerized
+# 🐳 MCP Dockerized
 
-A Model Context Protocol (MCP) server that can be easily deployed via Docker Compose with extensible tools and secure API key authentication.
+A containerized Model Context Protocol (MCP) server that can be easily deployed via Docker with extensible tools and secure API key authentication.
+
+[![Docker Hub](https://img.shields.io/docker/v/antpavlenkohmcorp/mcp-dockerized?label=Docker%20Hub&logo=docker)](https://hub.docker.com/r/antpavlenkohmcorp/mcp-dockerized)
+[![Multi-Platform](https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20arm64%20%7C%20armv7-blue?logo=docker)](https://hub.docker.com/r/antpavlenkohmcorp/mcp-dockerized)
+[![GitHub Actions](https://github.com/antpavlenko/mcp_dockerized/workflows/Build%20and%20Push%20Multi-Platform%20Docker%20Images/badge.svg)](https://github.com/antpavlenko/mcp_dockerized/actions)
+[![License](https://img.shields.io/github/license/antpavlenko/mcp_dockerized)](https://github.com/antpavlenko/mcp_dockerized/blob/main/LICENSE)
 
 ## Features
 
