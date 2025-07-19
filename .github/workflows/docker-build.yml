@@ -27,12 +27,13 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Log in to Docker Hub
-      if: github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != null && secrets.DOCKER_PASSWORD != null
+      if: github.event_name != 'pull_request'
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+      continue-on-error: true
 
     - name: Extract metadata
       id: meta
@@ -52,7 +53,7 @@ jobs:
         context: .
         file: ./Dockerfile
         platforms: linux/amd64,linux/arm64,linux/arm/v7
-        push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != null && secrets.DOCKER_PASSWORD != null }}
+        push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
@@ -72,12 +73,13 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Log in to Docker Hub
-      if: github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != null && secrets.DOCKER_PASSWORD != null
+      if: github.event_name != 'pull_request'
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+      continue-on-error: true
 
     - name: Extract metadata for Windows
       id: meta-windows
@@ -97,6 +99,6 @@ jobs:
         context: .
         file: ./Dockerfile.windows
         platforms: windows/amd64
-        push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != null && secrets.DOCKER_PASSWORD != null }}
+        push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta-windows.outputs.tags }}
         labels: ${{ steps.meta-windows.outputs.labels }}
