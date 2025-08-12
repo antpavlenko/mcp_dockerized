@@ -51,3 +51,6 @@ data/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# REST client files
+mcp_server_tests.http

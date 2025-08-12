@@ -2,7 +2,7 @@
 ### Server: mcp.micinc.tech
 ### API Key: jLDNcdk8X2CP5C0wizRWW4MtOyoy45VnzP1WVfVLvso
 
-@baseUrl = http://mcp.micinc.tech
+@baseUrl = http://mcp.micinc.tech:666
 @apiKey = ...
 
 ### 1. Health Check (No authentication required)

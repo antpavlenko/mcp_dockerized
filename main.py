@@ -5,6 +5,11 @@ import json
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
+import importlib
+import importlib.util
+import inspect
+import sys
+import threading
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, Security, status # type: ignore
@@ -12,12 +17,22 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials # type: ig
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+# Optional hot-reload dependencies
+try:
+    from watchdog.observers import Observer # type: ignore
+    from watchdog.events import FileSystemEventHandler # type: ignore
+except Exception:
+    Observer = None  # type: ignore
+    FileSystemEventHandler = object  # type: ignore
+
 from mcp_tools.base import BaseMCPTool
 from mcp_tools.console_tool import ConsoleTool
 from mcp_tools.system_info_tool import SystemInfoTool
 
 # Load environment variables
 load_dotenv()
+
+VERSION = "1.1.0"
 
 class MCPServer:
     def __init__(self):
@@ -41,18 +56,28 @@ class MCPServer:
         
         # Initialize MCP tools
         self.tools: Dict[str, BaseMCPTool] = {}
+        self._tool_meta: Dict[str, Dict[str, Any]] = {}
+        self.tools_lock = threading.RLock()
+        self.tools_dir = Path("mcp_tools")
+        self.tools_dir.mkdir(exist_ok=True)
         self.load_tools()
         
         # Setup FastAPI
         self.app = FastAPI(
             title="MCP Dockerized Server",
             description="A Model Context Protocol server with extensible tools",
-            version="1.0.0"
+            version=VERSION
         )
         self.setup_routes()
         
         # Security
         self.security = HTTPBearer()
+
+        # Start file watcher for hot-loading tools if watchdog is available
+        if Observer is not None:
+            self._start_tools_watcher()
+        else:
+            self.logger.warning("watchdog not installed; hot-loading of python tools is disabled. Install 'watchdog' to enable.")
 
     def setup_logging(self):
         """Setup logging with timestamp and configurable level"""
@@ -100,28 +125,113 @@ class MCPServer:
             )
         return credentials.credentials
 
-    def load_tools(self):
-        """Load all available MCP tools"""
-        # Add console tool
-        console_tool = ConsoleTool()
-        self.tools[console_tool.name] = console_tool
-        self.logger.info(f"Loaded tool: {console_tool.name}")
+    def _load_tool_from_module(self, module, src_path: Path) -> Optional[BaseMCPTool]:
+        """Given a loaded module, discover the first BaseMCPTool subclass and instantiate it."""
+        tool_cls = None
+        for _, obj in inspect.getmembers(module, inspect.isclass):
+            if issubclass(obj, BaseMCPTool) and obj is not BaseMCPTool:
+                tool_cls = obj
+                break
+        if not tool_cls:
+            return None
+        tool: BaseMCPTool = tool_cls()  # type: ignore
+        with self.tools_lock:
+            # Replace if exists
+            self.tools[tool.name] = tool
+            self._tool_meta[tool.name] = {"path": str(src_path), "module": module.__name__}
+        self.logger.info(f"Loaded tool: {tool.name} from {src_path}")
+        return tool
 
-        # Add system info tool
-        system_info_tool = SystemInfoTool()
-        self.tools[system_info_tool.name] = system_info_tool
-        self.logger.info(f"Loaded tool: {system_info_tool.name}")
+    def _import_module_from_path(self, path: Path) -> Optional[object]:
+        """Dynamically import a Python module from a file path with a unique module name."""
+        try:
+            unique_name = f"mcp_dynamic.{path.stem}_{int(path.stat().st_mtime)}"
+            spec = importlib.util.spec_from_file_location(unique_name, str(path))
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[unique_name] = module
+                spec.loader.exec_module(module)  # type: ignore
+                return module
+        except Exception as e:
+            self.logger.error(f"Failed to import module from {path}: {e}")
+        return None
 
-        # Auto-discover additional tools from mcp_tools directory
-        tools_dir = Path("mcp_tools")
-        if tools_dir.exists():
-            for tool_file in tools_dir.glob("*_tool.py"):
-                if tool_file.name not in ["console_tool.py", "system_info_tool.py"]:  # Skip already loaded
+    def _load_tool_from_file(self, path: Path) -> Optional[BaseMCPTool]:
+        module = self._import_module_from_path(path)
+        if not module:
+            return None
+        return self._load_tool_from_module(module, path)
+
+    def _unload_tools_from_path(self, path: Path):
+        """Unload any tool previously loaded from the given path."""
+        with self.tools_lock:
+            to_remove = [name for name, meta in self._tool_meta.items() if meta.get("path") == str(path)]
+            for name in to_remove:
+                self.tools.pop(name, None)
+                mod_name = self._tool_meta[name].get("module")
+                if mod_name and mod_name in sys.modules:
                     try:
-                        # Dynamic import would go here for additional tools
+                        del sys.modules[mod_name]
+                    except Exception:
                         pass
-                    except Exception as e:
-                        self.logger.error(f"Error loading tool {tool_file}: {e}")
+                del self._tool_meta[name]
+                self.logger.info(f"Unloaded tool: {name} from {path}")
+
+    def load_tools(self):
+        """Load all available MCP tools (built-ins + dynamically discovered)."""
+        # Built-in tools
+        with self.tools_lock:
+            console_tool = ConsoleTool()
+            self.tools[console_tool.name] = console_tool
+            self._tool_meta[console_tool.name] = {"path": str(self.tools_dir / "console_tool.py"), "module": ConsoleTool.__module__}
+            self.logger.info(f"Loaded tool: {console_tool.name}")
+
+            system_info_tool = SystemInfoTool()
+            self.tools[system_info_tool.name] = system_info_tool
+            self._tool_meta[system_info_tool.name] = {"path": str(self.tools_dir / "system_info_tool.py"), "module": SystemInfoTool.__module__}
+            self.logger.info(f"Loaded tool: {system_info_tool.name}")
+
+        # Discover other tools in mcp_tools directory
+        if self.tools_dir.exists():
+            for tool_file in self.tools_dir.glob("*_tool.py"):
+                # Skip the built-ins already loaded statically
+                if tool_file.name in {"console_tool.py", "system_info_tool.py", "base.py", "__init__.py"}:
+                    continue
+                try:
+                    self._load_tool_from_file(tool_file)
+                except Exception as e:
+                    self.logger.error(f"Error loading tool {tool_file}: {e}")
+
+    def _start_tools_watcher(self):
+        class _Handler(FileSystemEventHandler):
+            def __init__(self, outer: "MCPServer"):
+                self._outer = outer
+
+            def on_created(self, event):  # type: ignore[override]
+                p = Path(event.src_path)
+                if p.is_file() and p.name.endswith("_tool.py"):
+                    self._outer.logger.info(f"Detected new tool file: {p}")
+                    self._outer._load_tool_from_file(p)
+
+            def on_modified(self, event):  # type: ignore[override]
+                p = Path(event.src_path)
+                if p.is_file() and p.name.endswith("_tool.py"):
+                    self._outer.logger.info(f"Detected modified tool file: {p}")
+                    self._outer._unload_tools_from_path(p)
+                    self._outer._load_tool_from_file(p)
+
+            def on_deleted(self, event):  # type: ignore[override]
+                p = Path(event.src_path)
+                if p.name.endswith("_tool.py"):
+                    self._outer.logger.info(f"Detected deleted tool file: {p}")
+                    self._outer._unload_tools_from_path(p)
+
+        self._observer = Observer()
+        handler = _Handler(self)
+        self._observer.schedule(handler, str(self.tools_dir), recursive=False)
+        self._observer.daemon = True
+        self._observer.start()
+        self.logger.info(f"Started watchdog observer for tools in {self.tools_dir}")
 
     def setup_routes(self):
         """Setup FastAPI routes"""
@@ -129,11 +239,13 @@ class MCPServer:
         @self.app.get("/health")
         async def health_check():
             """Health check endpoint"""
+            with self.tools_lock:
+                tools_count = len(self.tools)
             return {
                 "status": "healthy",
                 "timestamp": datetime.utcnow().isoformat(),
-                "version": "1.0.0",
-                "tools_count": len(self.tools)
+                "version": VERSION,
+                "tools_count": tools_count
             }
 
         @self.app.post("/api/generate-key")
@@ -145,13 +257,14 @@ class MCPServer:
         @self.app.get("/api/tools")
         async def list_tools(api_key: str = Depends(self.validate_api_key)):
             """Get description of all available tools"""
-            tools_info = []
-            for tool_name, tool in self.tools.items():
-                tools_info.append({
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.get_parameters_schema()
-                })
+            with self.tools_lock:
+                tools_info = []
+                for tool_name, tool in self.tools.items():
+                    tools_info.append({
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.get_parameters_schema()
+                    })
             return {"tools": tools_info}
 
         @self.app.post("/api/tools/{tool_name}")
@@ -161,13 +274,10 @@ class MCPServer:
             api_key: str = Depends(self.validate_api_key)
         ):
             """Execute a specific tool"""
-            if tool_name not in self.tools:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Tool '{tool_name}' not found"
-                )
-            
-            tool = self.tools[tool_name]
+            with self.tools_lock:
+                tool = self.tools.get(tool_name)
+            if not tool:
+                raise HTTPException(status_code=404, detail=f"Tool '{tool_name}' not found")
             try:
                 result = await tool.execute(request)
                 return {
@@ -187,27 +297,18 @@ class MCPServer:
             """MCP Protocol: Initialize connection"""
             return {
                 "protocolVersion": "2024-11-05",
-                "capabilities": {
-                    "tools": {
-                        "listChanged": True
-                    }
-                },
-                "serverInfo": {
-                    "name": "mcp-dockerized",
-                    "version": "1.0.0"
-                }
+                "capabilities": {"tools": {"listChanged": True}},
+                "serverInfo": {"name": "mcp-dockerized", "version": VERSION}
             }
 
         @self.app.get("/api/mcp/tools/list")
         async def mcp_list_tools(api_key: str = Depends(self.validate_api_key)):
             """MCP Protocol: List available tools"""
-            tools_list = []
-            for tool_name, tool in self.tools.items():
-                tools_list.append({
-                    "name": tool.name,
-                    "description": tool.description,
-                    "inputSchema": tool.get_parameters_schema()
-                })
+            with self.tools_lock:
+                tools_list = [
+                    {"name": t.name, "description": t.description, "inputSchema": t.get_parameters_schema()}
+                    for t in self.tools.values()
+                ]
             return {"tools": tools_list}
 
         @self.app.post("/api/mcp/tools/call")
@@ -218,24 +319,33 @@ class MCPServer:
             """MCP Protocol: Call a tool"""
             tool_name = request.get("name")
             arguments = request.get("arguments", {})
-            
-            if tool_name not in self.tools:
-                return {
-                    "isError": True,
-                    "content": [{"type": "text", "text": f"Tool '{tool_name}' not found"}]
-                }
-            
-            tool = self.tools[tool_name]
+            with self.tools_lock:
+                tool = self.tools.get(tool_name)
+            if not tool:
+                return {"isError": True, "content": [{"type": "text", "text": f"Tool '{tool_name}' not found"}]}
             try:
                 result = await tool.execute(arguments)
-                return {
-                    "content": [{"type": "text", "text": str(result)}]
-                }
+                return {"content": [{"type": "text", "text": str(result)}]}
             except Exception as e:
-                return {
-                    "isError": True,
-                    "content": [{"type": "text", "text": f"Tool execution failed: {str(e)}"}]
-                }
+                return {"isError": True, "content": [{"type": "text", "text": f"Tool execution failed: {str(e)}"}]}
+
+        @self.app.post("/api/tools/reload")
+        async def reload_tools(api_key: str = Depends(self.validate_api_key)):
+            """Manually rescan the tools directory and reload python tools (useful when watchdog is unavailable)."""
+            reloaded = []
+            errors = []
+            if self.tools_dir.exists():
+                for tool_file in self.tools_dir.glob("*_tool.py"):
+                    if tool_file.name in {"console_tool.py", "system_info_tool.py", "base.py", "__init__.py"}:
+                        continue
+                    try:
+                        self._unload_tools_from_path(tool_file)
+                        tool = self._load_tool_from_file(tool_file)
+                        if tool:
+                            reloaded.append(tool.name)
+                    except Exception as e:
+                        errors.append({"file": str(tool_file), "error": str(e)})
+            return {"reloaded": reloaded, "errors": errors, "timestamp": datetime.utcnow().isoformat()}
 
     def run(self):
         """Start the MCP server"""

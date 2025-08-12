@@ -36,7 +36,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Labels for metadata (Docker Hub & OCI)
 LABEL org.opencontainers.image.title="MCP Dockerized" \
       org.opencontainers.image.description="🐳 Containerized Model Context Protocol (MCP) server with extensible tools, API key authentication, and multi-platform support. Easy deployment via Docker Compose with built-in health checks and logging." \
-      org.opencontainers.image.version="1.0.0" \
+      org.opencontainers.image.version="1.1.0" \
       org.opencontainers.image.vendor="Anton Pavlenko" \
       org.opencontainers.image.authors="Anton Pavlenko <apavlenko@hmcorp.fund>" \
       org.opencontainers.image.url="https://hub.docker.com/r/antpavlenkohmcorp/mcp-dockerized" \
